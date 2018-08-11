@@ -1,0 +1,23 @@
+
+
+
+generator int exp([int nvars, int nconsts], int bnd, int[nvars] vars, int[nconsts] consts){
+    //In this generator, nvars is the number of variables and nconsts is the number of constants.
+    //the array vars contains the values of all the variables and the array consts of all the constants.
+    //Note that unlike problem 1, where you were generating ASTs, here you are synthesizing the actual function.
+    //Also note that you will probably need a separate generator for the boolean expressions.
+}
+
+
+harness void experiment2(){
+    //Use this harness for the example from 1.e
+    //Assume that x is the first variable and y is the second variable, so the
+    //input x=10 and y=7, for example will correspond to an array {10,7}.
+}
+
+
+harness void experiment1(){
+    //Use this harness for the example from 1.b
+    //Assume that x is the first variable and y is the second variable, so the
+    //input x=8 and y=3, for example will correspond to an array {8,3}.
+}
