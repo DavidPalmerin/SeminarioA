@@ -82,60 +82,192 @@ function writeToConsole(text) {
 
 
 function bottomUp(globalBnd, intOps, boolOps, vars, consts, inputoutputs) {
-    //Complete the body of randomExpr
-	return "NYI";
+    observationalTable = {};
+    programs = []
+    insertVariables(programs, vars);
+    insertConstants(programs, consts);
+
+    //while (globalBnd > 0) {
+        programs = grow(programs, intOps, boolOps);
+
+        globalBnd--;
+    //}
+
+   
+    return "NYI";
+}
+
+function operator_arity(op) {
+    if (op == FALSE) return 0;
+    if (op == VR || op == NUM || op == NOT) return 1;
+    if (op == ITE) return 3;
+    return 2;
+}
+
+function verifyParams(params, expected) {
+
+
+}
+
+function assign_params(op, params) {
+    switch(op) {
+        case PLUS:
+            if (verifyParams(params, [NUM, NUM]))
+                return plus(params[0], params[1]);
+            break;
+        case TIMES:
+            if(verifyParams(params, [NUM, NUM]))
+                return times(params[0], params[1]);
+            break;
+        case LT:
+            if(verifyParams(params, [NUM, NUM]))
+                return lt(params[0], params[1]);
+            break;
+        case AND:
+            if(verifyParams(params, [FALSE, FALSE]))
+                return and(params[0], params[1]);
+            break;
+        case NOT:
+            if(verifyParams(params, [FALSE]))
+                return not(params[0]);
+            break;
+        case ITE:
+            if(verifyParams(FALSE, NUM, NUM))
+                return ite(params[0], params[1], params[2]);
+            break;
+        case NUM:
+            if(typeof params[0] == int)
+                return num(params[0]);
+            break;
+        case VR:
+            if(typeof params[0] == string)
+                return vr(params[0]);
+        case FALSE:
+            return flse();
+    }
+
+    return null;
 }
 
 
+
+function grow(programs, intOps, boolOps) {
+    newPrograms   = [];
+    permutations = permutations(programs.length, 3); // Since three is the maximum arity for operators in this grammar.
+    for (i = 0; i < intOps.length; i++) {
+        op = intOps[i];
+        arity = operator_arity(op);
+        arity_perms = permutations[arity];
+        for (j = 0; j < arity_perms.length; j++) {
+            params  = arity_perms[j].map(function(index) { return programs[index]; });
+            synth_program = assign_params(op, params);
+            if(synth_program != null)
+                newPrograms.push(synth_program);
+        }
+    }   
+    return newPrograms;
+}
+
+// All the permutations for 0 to n - 1 of length <= k.
+function permutations(n, k) {
+    var queue = [];
+    for (var i = 0; i < n; i++) queue.push([i]);
+
+    var permutations = {};
+    while (queue.length > 0 && queue[0].length <= k) {
+        var ls = queue.shift();
+        if (!(ls.length in permutations)) 
+            permutations[ls.length] = [ls];
+        else permutations[ls.length].push(ls);
+        
+        last = ls[ls.length - 1];
+        for (i = (last + 1) % n; i < n; i++)
+            queue.push(ls.concat([i]));
+    }   
+
+    return permutations;
+}
+
+function print() {
+    permutations(10, 4);
+}
+
+function insertConstants(programs, consts) {
+    for (i = 0; i < consts.length; i++)
+        programs.push(num(consts[i]));
+}
+
+function insertVariables(programs, vars) {
+    for (i = 0; i < vars.length; i++) 
+        programs.push(vr(vars[i]));
+}
+
+// Deletes equivalent programs based on obsevational equivalence.
+// observationalTable is a dictionary which key is the answer evaluated with a program p.
+function elimEquivalents(programs, observationalTable, inputs) {
+    newPrograms = []
+    for (i = 0; i < programs.length; i++) {
+        program = programs[i];
+        for (j = 0; j < inputs.length; j++) {
+            envt = input[j];
+            ans = interpret(program, envt);
+            if (! ans in observationalTable) { 
+                observationalTable.push({ans : program});
+                newPrograms.push(program);
+            }
+        }
+    }
+
+    return newPrograms;
+}
+
 function bottomUpFaster(globalBnd, intOps, boolOps, vars, consts, inputoutput){
-	
-	writeToConsole("NYI");
+    
+    writeToConsole("NYI");
 }
 
 
 function run1a1(){
-	
-	var rv = bottomUp(3, [VR, NUM, PLUS, TIMES, ITE], [AND, NOT, LT, FALSE], ["x", "y"], [4, 5], [{x:5,y:10, _out:5},{x:8,y:3, _out:3}]);
-	writeToConsole("RESULT: " + rv.toString());
-	
+    
+    var rv = bottomUp(3, [VR, NUM, PLUS, TIMES, ITE], [AND, NOT, LT, FALSE], ["x", "y"], [4, 5], [{x:5,y:10, _out:5},{x:8,y:3, _out:3}]);
+    writeToConsole("RESULT: " + rv.toString());
+    
 }
 
 
 function run1a2(){
-	
-	var rv = bottomUp(3, [VR, NUM, PLUS, TIMES, ITE], [AND, NOT, LT, FALSE], ["x", "y"], [-1, 5], [
-		{x:10, y:7, _out:17},
-		{x:4, y:7, _out:-7},
-		{x:10, y:3, _out:13},
-		{x:1, y:-7, _out:-6},
-		{x:1, y:8, _out:-8}		
-		]);
-	writeToConsole("RESULT: " + rv.toString());
-	
+    
+    var rv = bottomUp(3, [VR, NUM, PLUS, TIMES, ITE], [AND, NOT, LT, FALSE], ["x", "y"], [-1, 5], [
+        {x:10, y:7, _out:17},
+        {x:4, y:7, _out:-7},
+        {x:10, y:3, _out:13},
+        {x:1, y:-7, _out:-6},
+        {x:1, y:8, _out:-8}     
+        ]);
+    writeToConsole("RESULT: " + rv.toString());
+    
 }
 
 
 function run1b(){
-	
-	var rv = bottomUpFaster(3, [VR, NUM, PLUS, TIMES, ITE], [AND, NOT, LT, FALSE], ["x", "y"], [-1, 5], [
-		{x:10, y:7, _out:17},
-		{x:4, y:7, _out:-7},
-		{x:10, y:3, _out:13},
-		{x:1, y:-7, _out:-6},
-		{x:1, y:8, _out:-8}		
-		]);
-	writeToConsole("RESULT: " + rv.toString());
-	
+    
+    var rv = bottomUpFaster(3, [VR, NUM, PLUS, TIMES, ITE], [AND, NOT, LT, FALSE], ["x", "y"], [-1, 5], [
+        {x:10, y:7, _out:17},
+        {x:4, y:7, _out:-7},
+        {x:10, y:3, _out:13},
+        {x:1, y:-7, _out:-6},
+        {x:1, y:8, _out:-8}     
+        ]);
+    writeToConsole("RESULT: " + rv.toString());
+    
 }
-
-
 
 
 //Useful functions for exercise 2. 
 //Not so much starter code, though.
 
 function structured(inputoutputs){
-	return "NYI";
+    return "NYI";
 }
 
 
