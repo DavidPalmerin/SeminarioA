@@ -10,7 +10,9 @@ var AND = "AND";
 var NOT = "NOT";
 var ITE = "ITE";
 
-var ALLOPS = [NUM, FALSE, VR, PLUS, TIMES, LT, AND, NOT, ITE];
+var ALLOPS =  [NUM, FALSE, VR, PLUS, TIMES, LT, AND, NOT, ITE];
+var INTOPS =  [NUM, PLUS, TIMES];
+var BOOLOPS = [FALSE, LT, AND, NOT];
 
 function str(obj) { return JSON.stringify(obj); }
 
@@ -104,44 +106,52 @@ function operator_arity(op) {
     return 2;
 }
 
-function verifyParams(params, expected) {
-
-
+function validParams(params, validOptions) {
+    for (var i = 0; i < params.length; i++) {
+        if (!(params[i].type in validOptions))
+            return false;
+    }
+    return true;
 }
 
-function assign_params(op, params) {
+// checarbien esta funcion, como en not.
+// Falta ver caso especial de ITE. (Que coincidan en tipo los dos ultimos parametros, y que 
+// el primero sea booleano).
+// Y agregar caso especial para variables en validParams. (Pues vr puede ser numerico).
+function createNewProgram(op, params) {
     switch(op) {
         case PLUS:
-            if (verifyParams(params, [NUM, NUM]))
+            if (validParams(params, INTOPS))
                 return plus(params[0], params[1]);
             break;
         case TIMES:
-            if(verifyParams(params, [NUM, NUM]))
+            if (validParams(params, INTOPS))
                 return times(params[0], params[1]);
             break;
         case LT:
-            if(verifyParams(params, [NUM, NUM]))
+            if (validParams(params, INTOPS))
                 return lt(params[0], params[1]);
             break;
         case AND:
-            if(verifyParams(params, [FALSE, FALSE]))
+            if (validParams(params, BOOLOPS))
                 return and(params[0], params[1]);
             break;
         case NOT:
-            if(verifyParams(params, [FALSE]))
+            if (validParams(params, BOOLOPS))
                 return not(params[0]);
             break;
         case ITE:
-            if(verifyParams(FALSE, NUM, NUM))
+            if (validParams(params[0], BOOLOPS))
                 return ite(params[0], params[1], params[2]);
             break;
         case NUM:
-            if(typeof params[0] == int)
+            if (typeof params[0] == typeof 0)
                 return num(params[0]);
             break;
         case VR:
-            if(typeof params[0] == string)
+            if (typeof params[0] == typeof(" "))
                 return vr(params[0]);
+            break;
         case FALSE:
             return flse();
     }
@@ -149,19 +159,26 @@ function assign_params(op, params) {
     return null;
 }
 
+function myfun() {
+    programs = [plus(times(num(2), num(3)), num(2)), lt(num(2), num(5))];
+    newPrograms = grow(programs, INTOPS, BOOLOPS);
+    writeToConsole(newPrograms.length);
+    newPrograms.forEach(function(p) { console.log(p); } );
+}
 
 
+//Es mejor generr las permutaiones fuera del while de donde se llama.
 function grow(programs, intOps, boolOps) {
-    newPrograms   = [];
-    permutations = permutations(programs.length, 3); // Since three is the maximum arity for operators in this grammar.
-    for (i = 0; i < intOps.length; i++) {
+    var newPrograms = [];
+    permutations = genPermutations(programs.length, 3); // Since three is the maximum arity for operators in this grammar.
+    for (var i = 0; i < intOps.length; i++) {
         op = intOps[i];
         arity = operator_arity(op);
         arity_perms = permutations[arity];
-        for (j = 0; j < arity_perms.length; j++) {
-            params  = arity_perms[j].map(function(index) { return programs[index]; });
-            synth_program = assign_params(op, params);
-            if(synth_program != null)
+        for (var j = 0; j < arity_perms.length; j++) {
+            var params  = arity_perms[j].map(function(index) { return programs[index]; });
+            var synth_program = createNewProgram(op, params);
+            if (synth_program != null)
                 newPrograms.push(synth_program);
         }
     }   
@@ -169,7 +186,7 @@ function grow(programs, intOps, boolOps) {
 }
 
 // All the permutations for 0 to n - 1 of length <= k.
-function permutations(n, k) {
+function genPermutations(n, k) {
     var queue = [];
     for (var i = 0; i < n; i++) queue.push([i]);
 
@@ -186,10 +203,6 @@ function permutations(n, k) {
     }   
 
     return permutations;
-}
-
-function print() {
-    permutations(10, 4);
 }
 
 function insertConstants(programs, consts) {
