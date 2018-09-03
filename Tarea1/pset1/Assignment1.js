@@ -281,13 +281,12 @@ function bottomUpFaster(globalBnd, intOps, boolOps, vars, consts, inputoutputs){
     terminals = intPrograms;
 
     while (globalBnd > 0) {
-        console.log("Hey");
         intPermutations = getParamsIndices(intPrograms.length);
         boolPermutations = getParamsIndices(boolPrograms.length);
         intPermutations[3] = getParamsIndicesIte(boolPermutations[1], intPermutations[2]);
 
-        intsGrowth  = growFaster(intPrograms, boolPrograms, intPermutations, boolPermutations, intOps);
         boolsGrowth = growFaster(intPrograms, boolPrograms, intPermutations, boolPermutations, boolOps);
+        intsGrowth  = growFaster(intPrograms, boolPrograms, intPermutations, boolPermutations, intOps);
        
         intPrograms  = terminals.concat(elimEquivalents(intsGrowth, inputoutputs));
         boolPrograms = [flse()].concat(elimEquivalents(boolsGrowth, inputoutputs));
@@ -299,8 +298,10 @@ function bottomUpFaster(globalBnd, intOps, boolOps, vars, consts, inputoutputs){
             }
         }
         globalBnd--;
+        console.log(globalBnd);
     }
-    console.log("salio");
+
+    writeToConsole("salio");
     return "FAIL";   
 }
 
@@ -322,7 +323,6 @@ function growFaster(intPrograms, boolPrograms, intPermutations, boolPermutations
 }
 
 function genProgramsFaster(op, permutations, arguments){
-    console.log("genProgs");
     var synth_programs = []
     args = arguments[0];
     if (args.length == 0)
@@ -344,8 +344,9 @@ function genProgramsFaster(op, permutations, arguments){
                 params = args_indices.map(function(i) { return args[i]; });
             
             myProgram = createNewProgramFaster(op, params);
-            if (!(myProgram === undefined))
+            if (!(myProgram === undefined)){
                 synth_programs.push(myProgram);
+            }
         }
     }
     return synth_programs;
@@ -353,7 +354,7 @@ function genProgramsFaster(op, permutations, arguments){
 
 function validTypes(type, validTypes){
     for(var i = 0; i < validTypes.length; i++){
-        if (type == validTypes)
+        if(type == validTypes[i])
             return true;
     }
     return false;
@@ -365,11 +366,11 @@ function createNewProgramFaster(op, params) {
             return plus(params[0], params[1]);
             break;
         case TIMES:
-            if (validTypes(op.type, [VR, NUM]))
+            if (validTypes(params[0].type, [VR, NUM]) && validTypes(params[1].type, [VR, NUM]))               //Restricción de parametros válidos.
                 return times(params[0], params[1]);
             break;
         case LT:
-            if (validTypes(op.type, [VR, NUM]))
+            if (validTypes(params[0].type, [VR, NUM]) && validTypes(params[1].type, [VR, NUM]))               //Restricción de parámetros válidos.
                 return lt(params[0], params[1]);
             break;
         case AND:
@@ -420,7 +421,7 @@ function run1a2(){
 
 
 function run1b(){
-	var rv = bottomUpFaster(3, [VR, NUM, PLUS, TIMES, ITE], [AND, NOT, LT, FALSE], ["x", "y"], [-1, 5], [
+	var rv = bottomUpFaster(2, [VR, NUM, PLUS, TIMES, ITE], [AND, NOT, LT, FALSE], ["x", "y"], [-1, 5], [
 		{x:10, y:7, _out:17},
 		{x:4, y:7, _out:-7},
 		{x:10, y:3, _out:13},
@@ -445,7 +446,7 @@ function structured(inputoutputs){
                            function(_in, _out) { return _out - (_in * _in) },
                            function(_in, _out) { return _out - (3 *_in) } ];
     
-    constsCounters = groupConstantsByFunctions(missed_consts, inputoutputs);
+    constsCounters = groupConstantsByFunctions(missed_consts, inputoutputs);   // Obtiene 3 diccionarios para las evaluaciones de las constantes ?? de cada función.
 
     index = 0;
     seen = {};
@@ -453,24 +454,27 @@ function structured(inputoutputs){
         group = constsCounters[index];
         keys = Object.keys(group);
         [lb, ub, max, key, fun, _in] = [-1, -1, -1, -1, -1];
-        for (var j = 0; j < keys.length; j++) {
-            [x, y, counter, k_in] = group[keys[j]];
-            if (counter > max) 
+        for (var j = 0; j < keys.length; j++) {                                // Obtiene el valor counter máximo en el j-ésimo diccionario correspondiente a missed_consts[j];
+            [x, y, counter, k_in] = group[keys[j]];                            // Esto nos toma O(n) pues a lo más hay n llaves, pues cad auna corresponde a un input.
+            if (counter > max)  
                 [lb, ub, max, key, fun, _in] = [x, y, counter, keys[j], index, k_in];
         }
         if (max > 1) {
             constsCounters[index][key] = [-1, -1, -1, -1, -1, -1];
-            if (!(_in in seen)) 
-                seen[_in] = [lb, ub, max, parseInt(key), index, _in];
+            if (!(_in in seen))                                                // Guarda tal valor máximo en caso de que no se haya guardado otro valor para el mismo input.
+                seen[_in] = [lb, ub, max, parseInt(key), index, _in];   
         }
         else index++;
     }
+
 
     ranges = Object.values(seen);
 
     return buildExpression(ranges, functions);
 }
 
+// Función recursiva para construir el programa a partir de las reestricciones en expr.
+// Expr es una lista de lista con restricciones de cada subprograma.
 function buildExpression(exprs, functions) {
     if (exprs.length == 1) {
         [lb, ub, max, constant, exp_index] = exprs[0];
@@ -480,6 +484,15 @@ function buildExpression(exprs, functions) {
     return ite(lt(vr('x'), num(ub + 1)), plus(functions[exp_index], constant), buildExpression(exprs.slice(1, exprs.length), functions));
 }
 
+// Crea un diccionario para cada función, donde se evalúa la función con los inputs.
+// Cada llave es el resultado de despejar ?? en los terminos.
+// El valor será una lista con un contador de las entradas que resultan tener la misma constante despejada.
+// El valor mas imprtante en este momento es el contador, pues lo usaremos después, y además mantener actualizadas
+// las cotas superiores e inferiores (lb, ub).
+// Regresa un arreglo de tamaño 3, cada elemento es un diccionario correspondiente a cada función en functions.
+// Toma 3 * O(n) pues la longitud de functions es 3.
+// Gracias a que cada output pertenece a un único rango por HINT, sabemos que no contaremos mas de una vez en los contadores generados de cada 
+// diccionario.
 function groupConstantsByFunctions(functions, inputoutputs) {
     constsCounters = [{}, {}, {}];
     for (var i = 0; i < functions.length; i++) {
