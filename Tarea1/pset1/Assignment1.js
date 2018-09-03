@@ -113,9 +113,6 @@ function bottomUp(globalBnd, intOps, boolOps, vars, consts, inputoutputs) {
 }
 
 
-function bottomUpFaster(globalBnd, intOps, boolOps, vars, consts, inputoutput){
-	
-}
 
 // ----------------------- IMPLEMENTATION OF 1.A ----------------------------------
 
@@ -276,6 +273,130 @@ function operator_arity(op) {
 // --------------------- END OF 1.A ---------------------------
 
 
+function bottomUpFaster(globalBnd, intOps, boolOps, vars, consts, inputoutputs){
+    var intPrograms = [];
+    var boolPrograms = [flse()];
+    vars.forEach(function(v) { intPrograms.push(vr(v)); });
+    consts.forEach(function(v) { intPrograms.push(num(v)); });
+    terminals = intPrograms;
+
+    while (globalBnd > 0) {
+        console.log("Hey");
+        intPermutations = getParamsIndices(intPrograms.length);
+        boolPermutations = getParamsIndices(boolPrograms.length);
+        intPermutations[3] = getParamsIndicesIte(boolPermutations[1], intPermutations[2]);
+
+        intsGrowth  = growFaster(intPrograms, boolPrograms, intPermutations, boolPermutations, intOps);
+        boolsGrowth = growFaster(intPrograms, boolPrograms, intPermutations, boolPermutations, boolOps);
+       
+        intPrograms  = terminals.concat(elimEquivalents(intsGrowth, inputoutputs));
+        boolPrograms = [flse()].concat(elimEquivalents(boolsGrowth, inputoutputs));
+
+        var union = intPrograms.concat(boolPrograms);
+        for (var i = 0; i < union.length; i++){
+            if (isCorrect(union[i], inputoutputs)) {
+                return union[i];
+            }
+        }
+        globalBnd--;
+    }
+    console.log("salio");
+    return "FAIL";   
+}
+
+function growFaster(intPrograms, boolPrograms, intPermutations, boolPermutations, ops) {
+    var newPrograms = [];
+    esBool = ops[0] == FALSE || ops[0] == NOT || ops[0] == LT || ops[0] == AND;
+    for(var i = 0; i < ops.length; i++) {
+        op = ops[i];
+        synth_programs = undefined;
+        if (!esBool || op == LT) 
+            synth_programs = genProgramsFaster(op, intPermutations, [intPrograms, boolPrograms]);
+        else
+            synth_programs = genProgramsFaster(op, boolPermutations, [boolPrograms]);
+        synth_programs.forEach(function(p){
+            newPrograms.push(p);
+        });
+    }
+    return newPrograms;
+}
+
+function genProgramsFaster(op, permutations, arguments){
+    console.log("genProgs");
+    var synth_programs = []
+    args = arguments[0];
+    if (args.length == 0)
+        return synth_programs;
+
+    arity = operator_arity(op);
+    arity_permutations = permutations[arity];
+    if (arity > 0) {
+        for(var i = 0; i < arity_permutations.length; i++) {
+            args_indices = arity_permutations[i];
+            var params = [];
+            if (op == ITE && arguments[1].length > 0){
+                boolArg = arguments[1][args_indices[0]];  // arguments[1] is the list of boolPrograms.
+                args_indices.shift();
+                params = args_indices.map(function(i){ return args[i]; });
+                params.unshift(boolArg);
+            }
+            else if (op != ITE) 
+                params = args_indices.map(function(i) { return args[i]; });
+            
+            myProgram = createNewProgramFaster(op, params);
+            if (!(myProgram === undefined))
+                synth_programs.push(myProgram);
+        }
+    }
+    return synth_programs;
+}
+
+function validTypes(type, validTypes){
+    for(var i = 0; i < validTypes.length; i++){
+        if (type == validTypes)
+            return true;
+    }
+    return false;
+}
+
+function createNewProgramFaster(op, params) {
+    switch(op) {
+        case PLUS:
+            return plus(params[0], params[1]);
+            break;
+        case TIMES:
+            if (validTypes(op.type, [VR, NUM]))
+                return times(params[0], params[1]);
+            break;
+        case LT:
+            if (validTypes(op.type, [VR, NUM]))
+                return lt(params[0], params[1]);
+            break;
+        case AND:
+            return and(params[0], params[1]);
+            break;
+        case NOT:
+            return not(params[0]);
+            break;
+        case ITE:
+            return ite(params[0], params[1], params[2]);
+            break;
+        case NUM:
+            if (typeof params[0] == typeof(0))
+                return num(params[0]);
+            break;
+        case VR:
+            if (typeof params[0] == typeof(" "))
+                return vr(params[0]);
+            break;
+        case FALSE:
+            return flse();
+    }
+    return undefined;
+}
+
+
+
 function run1a1(){
 	
 	var rv = bottomUp(3, [VR, NUM, PLUS, TIMES, ITE], [AND, NOT, LT, FALSE], ["x", "y"], [4, 5], [{x:5,y:10, _out:5},{x:8,y:3, _out:3}]);
@@ -318,68 +439,45 @@ function structured(inputoutputs){
     ranges = {}
     const functions = [times(num(2), vr('x')),
                        times(vr('x'), vr('x')),
-                       times(num(3) * vr('x'))];
+                       times(num(3), vr('x'))];
     
     const missed_consts = [function(_in, _out) { return _out - (2 * _in) },
                            function(_in, _out) { return _out - (_in * _in) },
                            function(_in, _out) { return _out - (3 *_in) } ];
     
     constsCounters = groupConstantsByFunctions(missed_consts, inputoutputs);
-    
-    console.log("Constcounters");
-    for(var i = 0; i < constsCounters.length; i++) {
-        console.log(constsCounters[i]);
-    }
 
     index = 0;
-    ranges = [];
+    seen = {};
     while(index < 3) {
         group = constsCounters[index];
         keys = Object.keys(group);
-        [lb, ub, max, key, fun] = [-1, -1, -1, -1, -1];
+        [lb, ub, max, key, fun, _in] = [-1, -1, -1, -1, -1];
         for (var j = 0; j < keys.length; j++) {
-            [x, y, counter] = group[keys[j]];
+            [x, y, counter, k_in] = group[keys[j]];
             if (counter > max) 
-                [lb, ub, max, key, fun] = [x, y, counter, keys[j], index];
+                [lb, ub, max, key, fun, _in] = [x, y, counter, keys[j], index, k_in];
         }
         if (max > 1) {
-            constsCounters[index][key] = [-1, -1, -1, -1, -1];
-            flag = true;
-            for (var i = 0; i < ranges.length; i++){
-                [x, y, m, k, f] = ranges[i];
-                if (lb == x && ub == y) {
-                    flag = false;
-                    break;
-                }
-            }
-            if (flag)
-                ranges.push([lb, ub, max, parseInt(key), index]);
+            constsCounters[index][key] = [-1, -1, -1, -1, -1, -1];
+            if (!(_in in seen)) 
+                seen[_in] = [lb, ub, max, parseInt(key), index, _in];
         }
         else index++;
     }
 
-    console.log("Before");
-    console.log(ranges);
+    ranges = Object.values(seen);
 
+    return buildExpression(ranges, functions);
+}
 
-    ranges.sort(function(arr) { return arr[0]; });
-    console.log("After");
-    console.log(ranges);
-
-    ifs = undefined;
-    c = ranges.length - 1;
-    while (c >= 0) {
-        [lb, ub, counter, constant, exp_index] = ranges[c];
-        console.log([lb, ub, counter, constant, exp_index]);
-        if (c == ranges.length - 1)
-            ifs = plus(functions[exp_index], constant);
-        else
-            ifs = ite(lt(vr('x'), num(ub + 1)), plus(functions[exp_index], constant), ifs);
-        console.log(ifs);
-        c--;
+function buildExpression(exprs, functions) {
+    if (exprs.length == 1) {
+        [lb, ub, max, constant, exp_index] = exprs[0];
+        return plus(functions[exp_index],constant);
     }
-
-    return ifs === undefined ? "No se encontró programa" : ifs;
+    [lb, ub, max, constant, exp_index] = exprs[0];  
+    return ite(lt(vr('x'), num(ub + 1)), plus(functions[exp_index], constant), buildExpression(exprs.slice(1, exprs.length), functions));
 }
 
 function groupConstantsByFunctions(functions, inputoutputs) {
@@ -393,9 +491,9 @@ function groupConstantsByFunctions(functions, inputoutputs) {
                 [lb, ub, counter] = constsCounters[i][ans];
                 newLb = lb < _in ? lb : _in;
                 newUb = ub > _in ? ub : _in;
-                constsCounters[i][ans] = [newLb, newUb, counter + 1];
+                constsCounters[i][ans] = [newLb, newUb, counter + 1, _in];
             }
-            else constsCounters[i][ans] = [_in, _in, 1];
+            else constsCounters[i][ans] = [_in, _in, 1, _in];
         }
     } 
 
