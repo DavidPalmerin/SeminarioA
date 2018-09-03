@@ -1,18 +1,80 @@
-
-
-
-generator int exp([int nvars, int nconsts], int bnd, int[nvars] vars, int[nconsts] consts){
+generator int booleanExp([int nvars, int nconsts], int bnd, int[nvars] vars, int[nconsts] consts){
     //In this generator, nvars is the number of variables and nconsts is the number of constants.
     //the array vars contains the values of all the variables and the array consts of all the constants.
     //Note that unlike problem 1, where you were generating ASTs, here you are synthesizing the actual function.
     //Also note that you will probably need a separate generator for the boolean expressions.
+
+    if (bnd == 0) {
+        return false;
+    }
+    
+    int t = ??;
+    if (t == 0) {
+        return false;
+    }
+
+    bit expBool1 = booleanExp(nvars, nconsts, bnd-1, vars, consts);
+
+    if (t == 1) {
+        return !expBool1;
+    }
+    
+    bit expBool2 = booleanExp(nvars, nconsts, bnd-1, vars, consts);
+    
+    if (t == 2) {
+        return expBool1 < expBool2;
+    }
+    if (t == 3) {
+        return expBool1 && expBool2;
+    }
 }
 
+generator int integerExp(int nvars, int nconsts, int bnd, int[nvars] vars, int[nconsts] consts){
+    //In this generator, nvars is the number of variables and nconsts is the number of constants.
+    //the array vars contains the values of all the variables and the array consts of all the constants.
+    //Note that unlike problem 1, where you were generating ASTs, here you are synthesizing the actual function.
+    //Also note that you will probably need a separate generator for the boolean expressions.
+    
+    if (bnd == 0) {
+        int nconstant = ??;
+        return consts[nconstant];
+    }
+   
+    int t = ??;
+    if (t == 0) {
+        int nconstant = ??;
+        return consts[nconstant];
+    }
+
+    int intExp1 = integerExp(nvars, nconsts, bnd-1, vars, consts);
+    int intExp2 = integerExp(nvars, nconsts, bnd-1, vars, consts);
+
+    if (t == 1) {
+        int nvar = ??;
+        return vars[nvar];
+    }
+    if (t == 2) {
+        return intExp1 + intExp2;
+    }
+    if (t == 3) {
+        return intExp1 * intExp2;
+    }
+    if (t == 4) {
+        bit boolean = booleanExp(nvars, nconsts, bnd-1, vars, consts);
+        return boolean ? intExp1 : intExp2;
+    }
+}
 
 harness void experiment2(){
     //Use this harness for the example from 1.e
     //Assume that x is the first variable and y is the second variable, so the
     //input x=10 and y=7, for example will correspond to an array {10,7}.
+
+    foo(10, 7, 17);
+    foo(4, 7, -7);
+    foo(10, 3, 13);
+    foo(1, -7, -6);
+    foo(1, 8, -8);
 }
 
 
@@ -20,4 +82,19 @@ harness void experiment1(){
     //Use this harness for the example from 1.b
     //Assume that x is the first variable and y is the second variable, so the
     //input x=8 and y=3, for example will correspond to an array {8,3}.
+
+    foo(5, 5, 15);
+    foo(8, 3, 14);
+    foo(1234, 227, 1688);
+}
+
+void foo(int x, int y, int _out) {
+    int[3] arr;
+    arr[0] = -1;
+    arr[1] = 0;
+    arr[2] = 1;
+    int[2] nvars;
+    nvars[0] = x;
+    nvars[1] = y;
+    assert integerExp(2, 3, 3, nvars, arr) == _out;
 }
