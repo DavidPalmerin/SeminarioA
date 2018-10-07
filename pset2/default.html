@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title></title>
+  <link rel="StyleSheet" href="css/default.css" type="text/css"
+ media="screen">
+</head>
+<body>
+<big><big><big><big>Problem
+Set 2</big></big></big></big><br>
+<br>
+<br>
+<script src="./Assignment2.js"></script>
+<table style="width: 1013px;">
+  <tbody>
+    <tr>
+      
+      <td style="vertical-align:top;"> <textarea class="console" style="height:700px; width: 788px;" id="console"></textarea> </td>
+      <td>
+          Input for problem 2<br />
+          <textarea id="p2input" style="width:400px; height:350px;">
+block([
+    assume(tru()),
+    assgn('x', num(0)),
+    assgn('y', num(0)),
+    assgn('t', num(0)),
+    whle(lt(vr('x'), num(10)),
+        block([
+            ifte(lt(num(5), vr('t')), 
+            block([
+            assgn('x', plus(vr('x'),num(1))),
+            assgn('y', plus(vr('y'),num(1))),
+            ]), skip()),
+            assgn('t', plus(vr('t'), num(1))),
+        ])
+    ),
+    assert(eq(vr('x'), vr('y')))
+]);
+          </textarea>   
+          <div class="fakebutton" onclick="P2a()">Run <code>P2a</code></div> 
+          <div class="fakebutton" onclick="P2b()">Run <code>P2b</code></div> 
+
+      </td>
+    </tr>
+  </tbody>
+</table>
+<br>
+</body>
+</html>
