@@ -1,0 +1,140 @@
+generator int exp(int myi, int myj) {
+	int t = ??;
+
+	if (t == 0) {
+		return {| 0 | 1 | -1 |};
+	}
+
+	if (t == 1) {
+		return {| myi | myj |};
+	}
+
+	int left = exp(myi, myj);
+	int right = exp(myi, myj);
+
+	if (t == 2) {
+		return rect(left);
+	}
+
+	if (t == 3) {
+		return left + right;
+	}
+
+	if (t == 4) {
+		return left - right;
+	}
+}
+
+generator int rect(int x) {
+	if (x > 0) {
+		return 1;
+	}
+	if (x < 0) {
+		return -1;
+	}
+	return 0;
+}
+
+harness void new_coordinates(ref int myi, ref int myj, int N, int[2][N] obstacles, int[2] goal) {
+	int tmpi = myi + exp(myi, myj);
+	int tmpj = myj + exp(myi, myj);
+
+	assume tmpi >= 0;
+	assume tmpi < N;
+	assume tmpj >= 0;
+	assume tmpj < N;
+
+	bit has_shifted = tmpi != myi || tmpj != myj;
+	assert has_shifted == true;
+
+	int old_myi = myi;
+	int old_myj = myj;
+
+	old_myi = old_myi > tmpi ? old_myi - tmpi : old_myi - tmpi;
+	old_myj = old_myj > tmpj ? old_myj - tmpj : old_myj - tmpj;
+	
+	assert old_myi + old_myj <= 2;
+
+	bit flag = hasObstacle(N, obstacles, tmpi, tmpj);
+	assert flag == false;
+
+	int goal_distance = manhattan_distance(tmpi, tmpj, goal[0], goal[1]);
+	minimize(goal_distance);
+
+	myi = tmpi;
+	myj = tmpj;
+}
+
+generator void prog(int N, int[2][N] obstacles, ref int myi, ref int myj, int[2] goal) {
+	new_coordinates(myi, myj, N, obstacles, goal);
+}
+
+bit hasObstacle(int N, int[2][N] obstacles, int myi, int myj){
+	for (int k = 0; k < N; k++) {
+		int pos_i = obstacles[k][0];
+		int pos_j = obstacles[k][1];
+		if (pos_i == myi && pos_j == myj) {
+			return true;
+		}
+	}
+	return false;
+}
+
+void control([int N], ref int myi, ref int myj, int[2][N] obstacles, int[2] goal) {
+	int old_myi = myi;
+	int old_myj = myj;
+	
+	prog(N, obstacles, myi, myj, goal);
+}
+
+int manhattan_distance(int src_i, int src_j, int dest_i, int dest_j) {
+	int pos_i = src_i - dest_i < 0 ? -1 * (src_i - dest_i) : src_i - dest_i;
+	int pos_j = src_j - dest_j < 0 ? -1 * (src_j - dest_j) : src_j - dest_j;
+	return pos_i + pos_j;
+}
+
+harness void main(int N, int[2][N] obstacles, int[2] goal, int myi, int myj) {
+	assume N < 6 && N >= 0;
+
+	if (N == 0) {
+		assert true == true;
+		return;
+	}
+
+	assume myi == 0;
+	assume myj == 0;
+	assume goal[0] < N;
+	assume goal[0] >= 0;
+	assume goal[1] < N;
+	assume goal[1] >= 0;
+	assume hasObstacle(N, obstacles, goal[0], goal[1]) == false;
+	
+	for (int i = 0; i < N; i++) {
+		int pos_i = obstacles[i][0];
+		int pos_j = obstacles[i][1];
+		assume pos_i < N;
+		assume pos_i >= 0;
+		assume pos_j < N;
+		assume pos_j >= 0;
+		assume pos_j + pos_i != 0;
+		for (int j = i + 1; j < N; j++) {
+			int dest_i = obstacles[j][0];
+			int dest_j = obstacles[j][1];
+			int m_distance = manhattan_distance(pos_i, pos_j, dest_i, dest_j);
+			assume m_distance > 3;
+		}
+ 	}
+
+	int bnd = 24;
+	while (myi != goal[0] && myj != goal[1]) {
+		control(N, myi, myj, obstacles, goal);
+		bnd--;
+	}
+
+	assert bnd > 0;
+	assert myi == goal[0];
+	assert myj == goal[1];
+}
+
+
+
