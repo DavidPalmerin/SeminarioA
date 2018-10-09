@@ -96,8 +96,8 @@ int manhattan_distance(int src_i, int src_j, int dest_i, int dest_j) {
 
 harness void main() {
 	int N = ??;
-	// assert N < 3;
-	// assert N >= 0;
+	assert N < 3;
+	assert N >= 0;
 
 	// Initial position of the agent.
 	int myi = 0;
