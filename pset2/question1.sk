@@ -55,10 +55,10 @@ harness void new_coordinates(int N, int[2][N] obstacles, ref int myi, ref int my
 
 	prog(N, obstacles, myi, myj, goal);
 
-	assert myi < N;
-	assert myi >= 0;
-	assert myj < N;
-	assert myj >= 0;
+	assume myi < N;
+	assume myi >= 0;
+	assume myj < N;
+	assume myj >= 0;
 
 	bit has_shifted = old_myi != myi || old_myj != myj;
 	assert has_shifted == true;
@@ -69,11 +69,11 @@ harness void new_coordinates(int N, int[2][N] obstacles, ref int myi, ref int my
 	assert old_myi <= 1;
 	assert old_myj <= 1;
 
-	// int m_distance = manhattan_distance(old_myi, old_myj, myi, myj);
-	// minimize(m_distance);
+	int m_distance = manhattan_distance(old_myi, old_myj, myi, myj);
+	minimize(m_distance);
 }
 
-bit hasObstacle(int N, int[2][N] obstacles, int myi, int myj){
+bit hasObstacle(int N, int[2][N] obstacles, int myi, int myj) {
 	for (int k = 0; k < N; k++) {
 		int pos_i = obstacles[k][0];
 		int pos_j = obstacles[k][1];
@@ -94,43 +94,57 @@ int manhattan_distance(int src_i, int src_j, int dest_i, int dest_j) {
 	return pos_i + pos_j;
 }
 
-harness void main() {
+harness void checker(int N, int[2][N] obstacles, ref int myi, ref int myj, int[2] goal) {
+	// At most the agent has to take 24 moves.
+	int bnd = ??;
+	assert bnd < 24;
+	assert bnd > 0;
+	while (myi != goal[0] && myj != goal[1]) {
+		control(N, myi, myj, obstacles, goal);
+		bnd--;
+		assert bnd >= 0;
+	}
+
+	//We look for the smaller number of steps.
+	minimize(bnd);
+}
+
+void main() {
 	int N = ??;
-	assert N < 3;
-	assert N >= 0;
+	assume N < 3;
+	assume N >= 0;
 
 	// Initial position of the agent.
 	int myi = 0;
 	int myj = 0;
 
-	// Position of the goal in the grid.
 	int[2] goal = {??, ??};
-	assert goal[0] < N;
-	assert goal[0] >= 0;
-	assert goal[1] < N;
-	assert goal[1] >= 0;
+	assume goal[0] < N;
+	assume goal[0] >= 0;
+	assume goal[1] < N;
+	assume goal[1] >= 0;
 
 	int [2][N] obstacles;
 	for (int i = 0; i < N; i++) {
 		int pos_i = ??;
 		int pos_j = ??;
 
-		// Each obstacle is inside the boundaries.
-		assert pos_i < N;
-		assert pos_i >= 0;
-		assert pos_j < N;
-		assert pos_j >= 0;
-
 		// There's no obstacle at the initial position.
-		assert pos_i != 0;
-		assert pos_j != 0;
+		assume pos_i != 0;
+		assume pos_j != 0;
+
+		// Each obstacle is inside the boundaries.
+		assume pos_i < N;
+		assume pos_i >= 0;
+		assume pos_j < N;
+		assume pos_j >= 0;
 
 		for (int j = 0; j < i; j++) {
 			int dest_i = obstacles[j][0];
 			int dest_j = obstacles[j][1];
 			// For every pair of obstacles, the distance is at least 3.
 			int m_distance = manhattan_distance(pos_i, pos_j, dest_i, dest_j);
-			assert m_distance > 3;
+			assume m_distance > 3;
 		}
 
 		// Assignment of the obstacle.
@@ -138,19 +152,7 @@ harness void main() {
 		obstacles[i][1] = pos_j;
 	}
 
-	int bnd = 23;
-	while (bnd > 0 && myi != goal[0] && myj != goal[1]) {
-		control(N, myi, myj, obstacles, goal);
-		bnd--;
-		assert bnd >= 0;
-	}
-
-	// At most the agent has to take 24 moves.
-	assert bnd >= 0;
-
-	// The agent made it to the goal.
-	assert myi == goal[0];
-	assert myj == goal[1];
+	checker(N, obstacles, myi, myj, goal);
 }
 
 
