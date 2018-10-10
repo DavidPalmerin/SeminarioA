@@ -1,3 +1,4 @@
+// Generator for the expressions given in the assignment.
 generator int exp(int myi, int myj, int[2] goal) {
 	int t = ??;
 
@@ -29,6 +30,7 @@ generator int exp(int myi, int myj, int[2] goal) {
 	}
 }
 
+// Given function in the assignment.
 int rect(int x) {
 	if (x > 0) {
 		return 1;
@@ -39,40 +41,24 @@ int rect(int x) {
 	return 0;
 }
 
+// Generator for condassign given in the grammar.
 generator void prog(int N, int[2][N] obstacles, ref int myi, ref int myj, int[2] goal) {
 	int tmpi = myi + exp(myi, myj, goal);
 	int tmpj = myj + exp(myi, myj, goal);
 
-	if (!hasObstacle(N, obstacles, tmpi, tmpj)) {
-		myi = tmpi;
-		myj = tmpj;
+	if (hasObstacle(N, obstacles, tmpi, tmpj)) {
+			myi = tmpi;
+			myj = tmpj;
+			return;
 	}
-}
 
-harness void new_coordinates(int N, int[2][N] obstacles, ref int myi, ref int myj, int[2] goal) {
-	int old_myi = myi;
-	int old_myj = myj;
-
+	// Recursive call if the new coordinates are on an obstacle.
 	prog(N, obstacles, myi, myj, goal);
-
-	assume myi < N;
-	assume myi >= 0;
-	assume myj < N;
-	assume myj >= 0;
-
-	bit has_shifted = old_myi != myi || old_myj != myj;
-	assert has_shifted == true;
-
-	old_myi = old_myi > myi ? old_myi - myi : myi - old_myi;
-	old_myj = old_myj > myj ? old_myj - myj : myj - old_myj;
-
-	assert old_myi <= 1;
-	assert old_myj <= 1;
-
-	int m_distance = manhattan_distance(old_myi, old_myj, myi, myj);
-	minimize(m_distance);
 }
 
+// Checks that a given coordinate is not on a obstacle.
+// Returns true if the coordinate is not on a obstacle.
+// Otherwise, returns false.
 bit hasObstacle(int N, int[2][N] obstacles, int myi, int myj) {
 	for (int k = 0; k < N; k++) {
 		int pos_i = obstacles[k][0];
@@ -84,8 +70,34 @@ bit hasObstacle(int N, int[2][N] obstacles, int myi, int myj) {
 	return false;
 }
 
+// Function that will specify the boundaries for the coordinates. 
+// These boundaries can be the distance from the old coordinate to the new coordinate.
+// That the agent has indeed moved.
+// The agent remains inside the grid.
 void control([int N], ref int myi, ref int myj, int[2][N] obstacles, int[2] goal) {
-	new_coordinates(N, obstacles, myi, myj, goal);
+	int old_myi = myi;
+	int old_myj = myj;
+
+	// Call for the generator.
+	prog(N, obstacles, myi, myj, goal);
+
+	// Checks that the new position is in the grid boundaries.
+	int GRID_TAM = 8;
+	assert myi < GRID_TAM;
+	assert myj < GRID_TAM; 
+	assert myi >= 0;
+	assert myj >= 0;
+
+	bit has_shifted = old_myi != myi || old_myj != myj;
+	assert has_shifted == true;
+
+	// Gets the difference of old coordinates vs. new coordinates.
+	old_myi = old_myi > myi ? old_myi - myi : myi - old_myi;
+	old_myj = old_myj > myj ? old_myj - myj : myj - old_myj;
+
+	// Checks that the agent moves at most 1 position in each axis.
+	assert old_myi <= 1;
+	assert old_myj <= 1;
 }
 
 int manhattan_distance(int src_i, int src_j, int dest_i, int dest_j) {
@@ -94,66 +106,67 @@ int manhattan_distance(int src_i, int src_j, int dest_i, int dest_j) {
 	return pos_i + pos_j;
 }
 
-harness void checker(int N, int[2][N] obstacles, ref int myi, ref int myj, int[2] goal) {
-	// At most the agent has to take 24 moves.
-	int bnd = ??;
-	assert bnd < 24;
-	assert bnd > 0;
-	while (myi != goal[0] && myj != goal[1]) {
-		control(N, myi, myj, obstacles, goal);
-		bnd--;
-		assert bnd >= 0;
+// Recursive function that calls control.
+// The wrapper is for the counter bnd which will be decreasing until it's 0 (or less).
+harness void control_wrapper([int N], ref int myi, ref int myj, int[2][N] obstacles, int[2] goal, int bnd) {
+	if (bnd <= 0) {
+		return;
 	}
 
-	//We look for the smaller number of steps.
-	minimize(bnd);
+	// Calls the function that takes the steps for the agent.
+	control(N, myi, myj, obstacles, goal);
+
+	// If the agent is not in the goal yet, then it should move again iff bnd > 0.
+	if (myi != goal[0] && myj != goal[1]) {
+		control_wrapper(N, myi, myj, obstacles, goal, bnd - 1);
+	}
 }
 
-void main() {
-	int N = ??;
-	assume N < 3;
+// Main function where the parameters will be received.
+void main(int N, int[2][N] obstacles, int[2] goal) {
+	int GRID_TAM = 8;
+	assume N < 8;
 	assume N >= 0;
 
 	// Initial position of the agent.
 	int myi = 0;
 	int myj = 0;
 
-	int[2] goal = {??, ??};
-	assume goal[0] < N;
+	assume goal[0] < GRID_TAM;
 	assume goal[0] >= 0;
-	assume goal[1] < N;
+	assume goal[1] < GRID_TAM;
 	assume goal[1] >= 0;
 
-	int [2][N] obstacles;
 	for (int i = 0; i < N; i++) {
-		int pos_i = ??;
-		int pos_j = ??;
+		int pos_i = obstacles[i][0];
+		int pos_j = obstacles[i][1];
 
 		// There's no obstacle at the initial position.
 		assume pos_i != 0;
 		assume pos_j != 0;
 
 		// Each obstacle is inside the boundaries.
-		assume pos_i < N;
+		assume pos_i < GRID_TAM;
 		assume pos_i >= 0;
-		assume pos_j < N;
+		assume pos_j < GRID_TAM;
 		assume pos_j >= 0;
 
+		// Manhattan Distance verification for every pair of obstacles before the current.
 		for (int j = 0; j < i; j++) {
 			int dest_i = obstacles[j][0];
 			int dest_j = obstacles[j][1];
-			// For every pair of obstacles, the distance is at least 3.
 			int m_distance = manhattan_distance(pos_i, pos_j, dest_i, dest_j);
 			assume m_distance > 3;
 		}
-
-		// Assignment of the obstacle.
-		obstacles[i][0] = pos_i;
-		obstacles[i][1] = pos_j;
 	}
 
-	checker(N, obstacles, myi, myj, goal);
+	// At most the agent has to take 24 moves.
+	while (myi != goal[0] && myj != goal[1]) {
+		int bnd = 24;
+		// Calls the function where 24 is the maximum steps for the agent.
+		control_wrapper(N, myi, myj, obstacles, goal, bnd);
+	}
+
+	assert myi == goal[0];
+	assert myj == goal[1];
 }
-
-
-
