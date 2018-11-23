@@ -1,0 +1,46 @@
+-- Here you can try your own examples. Have fun! :)
+data BST a where
+    Empty :: BST a
+    Node  :: x: a -> l: BST {a | _v < x} -> r: BST {a | x < _v} -> BST a
+
+data SortedList a where
+    Nil :: SortedList a
+    Cons:: x: a -> xs:SortedList { a | _v < x } -> SortedList a
+
+termination measure height :: BST a -> {Int | _v >= 0} where
+    Empty -> 0
+    Node x l r -> 1 + if (height l) < (height r) then (height r) else (height l)
+
+termination measure len :: SortedList a -> {Int | _v >= 0} where
+  Nil -> 0
+  Cons x xs -> 1 + len xs 
+  
+measure keys :: BST a -> Set a where
+    Empty -> []
+    Node x l r -> keys l + keys r + [x]
+    
+measure vals :: SortedList a -> Set a where
+    Nil -> []
+    Cons x xs -> vals xs + [x]
+
+leq :: x: a -> y: a -> {Bool | _v == (x <= y)}
+neq :: x: a -> y: a -> {Bool | _v == (x != y)}
+
+-- Defined new predicate for equality.
+eq  :: x: a -> y: a -> {Bool | _v == (x == y)}
+        
+-- Our synthesis goal: a function that inserts a key into a BST
+insert :: x: a -> xs: SortedList a -> {SortedList a | vals _v == vals xs + [x]}
+insert = ??
+
+-- Our synthesis goal: a function that returns a merged list of x and y
+merge :: xs:SortedList a  -> ys:SortedList a -> {SortedList a | vals _v == vals xs + vals ys}
+merge = ??
+
+-- Function that transforms a BST to a SortedList using a merge function.
+transform :: t:BST a -> {SortedList a | vals _v == keys t}
+transform = \t .
+    match t with
+        Empty -> Nil
+        Node x l r -> insert ?? ??
+                
